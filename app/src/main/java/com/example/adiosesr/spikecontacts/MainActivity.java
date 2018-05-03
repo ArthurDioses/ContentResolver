@@ -1,7 +1,6 @@
 package com.example.adiosesr.spikecontacts;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.provider.ContactsContract;
@@ -33,8 +32,19 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.rvContacts)
     RecyclerView rvContacts;
 
+    @BindView(R.id.rvContactTwo)
+    RecyclerView rvContactsTwo;
+
     @BindView(R.id.tvMacId)
     TextView tvMacId;
+
+
+    private static final String[] PROJECTION = new String[]{
+            ContactsContract.CommonDataKinds.Email.CONTACT_ID,
+            ContactsContract.Contacts.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Email.DATA,
+            ContactsContract.CommonDataKinds.Photo.PHOTO_URI
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,16 +95,82 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @OnClick(R.id.btnListDB)
+    public void btnListDB() {
+        Dexter.withActivity(this).withPermission(Manifest.permission.READ_CONTACTS).withListener(new PermissionListener() {
+            @Override
+            public void onPermissionGranted(PermissionGrantedResponse response) {
+                getContactsTwo();
+            }
+
+            @Override
+            public void onPermissionDenied(PermissionDeniedResponse response) {
+                //Empty
+            }
+
+            @Override
+            public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+                //Empty
+            }
+        }).onSameThread().check();
+    }
+
+    private void getContactsTwo() {
+
+        List<Contact> contactList = new ArrayList<>();
+        Contact contact;
+
+        ContentResolver contentResolver = getContentResolver();
+        Cursor cursor = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                PROJECTION,
+                null,
+                null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
+
+        if (cursor != null) {
+            try {
+                final int nameIndex = cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME);
+                final int numberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+                final int photoIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo.PHOTO_URI);
+
+                String name, number, photo;
+                while (cursor.moveToNext()) {
+                    name = cursor.getString(nameIndex);
+                    number = cursor.getString(numberIndex);
+                    photo = cursor.getString(photoIndex);
+
+                    contact = new Contact();
+
+                    contact.setName(name);
+                    contact.setNumber(number);
+                    contact.setUriPhoto(photo);
+                    contactList.add(contact);
+                }
+            } catch (Exception e) {
+                e.getMessage();
+            } finally {
+                cursor.close();
+            }
+        }
+        ContactAdapter contactAdapter = new ContactAdapter(contactList, this);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
+        rvContactsTwo.setLayoutManager(layoutManager);
+        rvContactsTwo.setAdapter(contactAdapter);
+        RecyclerView.ItemDecoration itemDecoration = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
+        rvContactsTwo.addItemDecoration(itemDecoration);
+    }
+
     private void getContacts() {
         List<Contact> contactList = new ArrayList<>();
         Contact contact;
 
         ContentResolver contentResolver = getContentResolver();
-        @SuppressLint("Recycle") Cursor cursor = contentResolver.query(ContactsContract.Contacts.CONTENT_URI,
+        Cursor cursor = contentResolver.query(ContactsContract.Contacts.CONTENT_URI,
                 null,
                 null,
                 null,
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
+
         if (cursor.getCount() > 0) {
             while (cursor.moveToNext()) {
                 int hasPhoneNumber = Integer.parseInt(cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.HAS_PHONE_NUMBER)));
@@ -134,11 +210,10 @@ public class MainActivity extends AppCompatActivity {
                             null);
                     while (photoCursor.moveToNext()) {
                         String namePhoto = photoCursor.getString(photoCursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo.PHOTO_URI));
-                        contact.setPhoto(namePhoto);
+                        contact.setUriPhoto(namePhoto);
                     }
                     phoneCursor.close();
                     //-------------------------------------------------------------
-
                     contactList.add(contact);
                 }
             }

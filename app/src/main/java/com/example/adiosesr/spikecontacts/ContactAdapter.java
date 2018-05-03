@@ -61,7 +61,7 @@ public class ContactAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         private void bindView(Contact contact) {
             tvName.setText(contact.getName());
             tvNumber.setText(contact.getNumber());
-            Glide.with(itemView).load(contact.getPhoto()).apply(RequestOptions.circleCropTransform()).into(ivContact);
+            Glide.with(itemView).load(contact.getUriPhoto()).apply(RequestOptions.circleCropTransform()).into(ivContact);
         }
     }
 }
